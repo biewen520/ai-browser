@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import Header from '@/components/Header'
 import { Input, Slider, Button, App } from 'antd'
+import { CaretRightOutlined, PauseOutlined } from '@ant-design/icons'
 import { EkoResult, StreamCallbackMessage } from '@jarvis-agent/core/dist/types';
 import { MessageList } from '@/components/chat/MessageComponents';
+import { AtomicFragmentRenderer } from '@/components/chat/AtomicFragmentRenderer';
 import { uuidv4 } from '@/common/utils';
 import { StepUpDown, SendMessage, CancleTask } from '@/icons/deepfundai-icons';
-import { Task, ToolAction, FileAttachment } from '@/models';
+import { Task, ToolAction, FileAttachment, AgentGroupMessage } from '@/models';
 import type { HumanResponseMessage } from '@/models/human-interaction';
 import { MessageProcessor } from '@/utils/messageTransform';
 import { useTaskManager } from '@/hooks/useTaskManager';
@@ -15,6 +17,7 @@ import { scheduledTaskStorage } from '@/lib/scheduled-task-storage';
 import { useTranslation } from 'react-i18next';
 import path from 'path';
 import { FileAttachmentList } from '@/components/chat/FileAttachmentList';
+import { useHistoryPlayback } from '@/hooks/useHistoryPlayback';
 
 
 export default function main() {
@@ -48,6 +51,17 @@ export default function main() {
 
     // Use Zustand history state management
     const { selectedHistoryTask, clearSelectedHistoryTask, setTerminateCurrentTaskFn } = useHistoryStore();
+
+    // History playback control (only active in history mode)
+    const playback = useHistoryPlayback({
+        messages: isHistoryMode ? messages : [],
+        autoPlay: false,
+        defaultSpeed: 1, // Default to 1x speed for typewriter effect
+    });
+
+    // In history mode: show all messages when idle, show fragments when playing
+    // In normal mode: always show all messages
+    const shouldUseFragments = isHistoryMode && playback.playbackState !== 'idle';
 
     const [showDetail, setShowDetail] = useState(false);
     const [query, setQuery] = useState('');
@@ -88,11 +102,93 @@ export default function main() {
     const [isAtBottom, setIsAtBottom] = useState(true);
     const [isUserScrolling, setIsUserScrolling] = useState(false);
     const scrollTimeoutRef = useRef<NodeJS.Timeout>(null);
+    // Track last displayed tool ID to prevent duplicate screenshot display
+    const lastDisplayedToolIdRef = useRef<string | null>(null);
+    const screenshotTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Synchronize taskIdRef
     useEffect(() => {
         taskIdRef.current = currentTaskId;
     }, [currentTaskId]);
+
+    // Auto scroll to bottom when playback fragments update (only in history playback mode)
+    useEffect(() => {
+        if (isHistoryMode && playback.playbackState === 'playing' && scrollContainerRef.current) {
+            // Smooth scroll to bottom when new fragment appears
+            const scrollContainer = scrollContainerRef.current;
+            scrollContainer.scrollTo({
+                top: scrollContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }, [isHistoryMode, playback.displayedFragments.length, playback.playbackState]);
+
+    // Auto show tool screenshots during playback
+    useEffect(() => {
+        if (!isHistoryMode || playback.playbackState !== 'playing') {
+            // Reset when not playing
+            lastDisplayedToolIdRef.current = null;
+            return;
+        }
+
+        // Get current fragment
+        const currentFragment = playback.displayedFragments[playback.currentIndex];
+        if (!currentFragment) return;
+
+        // Check if current fragment is a tool fragment
+        if (currentFragment.type === 'tool' && currentFragment.data?.toolMessage) {
+            const toolMessage = currentFragment.data.toolMessage as ToolAction;
+
+            // Prevent duplicate display of the same tool screenshot
+            if (lastDisplayedToolIdRef.current === toolMessage.id) {
+                console.log('[Playback] Skipping duplicate screenshot for tool:', toolMessage.id);
+                return;
+            }
+
+            // Find matching tool in toolHistory with screenshot
+            const toolWithScreenshot = toolHistory.find(
+                tool => tool.id === toolMessage.id && tool.screenshot
+            );
+
+            if (toolWithScreenshot && toolWithScreenshot.screenshot) {
+                // Find the tool index in history
+                const toolIndex = toolHistory.findIndex(t => t.id === toolWithScreenshot.id);
+
+                if (toolIndex !== -1) {
+                    // Clear any pending screenshot timeout
+                    if (screenshotTimeoutRef.current) {
+                        clearTimeout(screenshotTimeoutRef.current);
+                        screenshotTimeoutRef.current = null;
+                    }
+
+                    // Update last displayed tool ID
+                    lastDisplayedToolIdRef.current = toolMessage.id;
+
+                    // Auto show detail panel
+                    setShowDetail(true);
+
+                    // Use switchToHistoryIndex to properly display screenshot
+                    // Add a small delay to ensure state updates are processed
+                    screenshotTimeoutRef.current = setTimeout(() => {
+                        switchToHistoryIndex(toolIndex);
+                        screenshotTimeoutRef.current = null;
+                    }, 100);
+
+                    console.log('[Playback] Auto showing screenshot for tool:', toolMessage.toolName, 'ID:', toolMessage.id, 'at index:', toolIndex);
+                }
+            } else {
+                console.log('[Playback] No screenshot found for tool:', toolMessage.toolName, 'ID:', toolMessage.id);
+            }
+        }
+
+        // Cleanup function to clear timeout
+        return () => {
+            if (screenshotTimeoutRef.current) {
+                clearTimeout(screenshotTimeoutRef.current);
+                screenshotTimeoutRef.current = null;
+            }
+        };
+    }, [isHistoryMode, playback.currentIndex, playback.playbackState]);
 
     // Reset viewing attachment flag when detail panel is closed
     useEffect(() => {
@@ -684,6 +780,12 @@ export default function main() {
 
     // Switch to specified history index
     const switchToHistoryIndex = async (newIndex: number) => {
+        // Prevent redundant switches to the same index
+        if (currentHistoryIndex === newIndex) {
+            console.log('[switchToHistoryIndex] Already at index', newIndex, ', skipping');
+            return;
+        }
+
         // Reset viewing attachment flag when switching to history screenshots
         setIsViewingAttachment(false);
 
@@ -693,10 +795,10 @@ export default function main() {
             try {
                 if (window.api && (window.api as any).hideHistoryView) {
                     await (window.api as any).hideHistoryView();
-                    console.log('Switched to real-time view');
+                    console.log('[switchToHistoryIndex] Switched to real-time view');
                 }
             } catch (error) {
-                console.error('Failed to hide history view:', error);
+                console.error('[switchToHistoryIndex] Failed to hide history view:', error);
             }
         } else {
             setCurrentHistoryIndex(newIndex);
@@ -704,22 +806,25 @@ export default function main() {
             const historyTool = toolHistory[newIndex];
             if (historyTool && historyTool.screenshot) {
                 try {
+                    console.log('[switchToHistoryIndex] Showing screenshot for tool:', newIndex, 'ID:', historyTool.id);
                     if (window.api && (window.api as any).showHistoryView) {
                         await (window.api as any).showHistoryView(historyTool.screenshot);
-                        console.log('Switched to history tool:', newIndex + 1);
+                        console.log('[switchToHistoryIndex] Successfully switched to history tool:', newIndex + 1);
                     }
                 } catch (error) {
-                    console.error('Failed to show history view:', error);
+                    console.error('[switchToHistoryIndex] Failed to show history view:', error);
+                    // Don't break execution, just log the error
+                    antdMessage.error('截图显示失败，请重试');
                 }
             } else {
                 // If no screenshot available, hide history view
-                console.warn('No screenshot available for history index:', newIndex);
+                console.warn('[switchToHistoryIndex] No screenshot available for history index:', newIndex);
                 try {
                     if (window.api && (window.api as any).hideHistoryView) {
                         await (window.api as any).hideHistoryView();
                     }
                 } catch (error) {
-                    console.error('Failed to hide history view:', error);
+                    console.error('[switchToHistoryIndex] Failed to hide history view:', error);
                 }
             }
         }
@@ -805,9 +910,10 @@ export default function main() {
             setCurrentTaskId(currentTask.id);
             taskIdRef.current = currentTask.id;
 
-            // 5. Update task status to running (use forceUpdate to bypass isHistoryMode check)
-            // Note: forceUpdate is needed because isHistoryMode state update is async
-            updateTask(currentTask.id, { status: 'running' }, true);
+            // 5. Keep the original task status (don't set to 'running')
+            // Task will be set to 'running' only when user actually sends a new message
+            // This prevents the confusing state where task appears to be running but isn't
+            console.log('[Continue] Task restored, keeping original status:', currentTask.status);
 
             // 6. Restore lastUrl if available
             if (currentTask.lastUrl && window.api) {
@@ -1063,7 +1169,12 @@ export default function main() {
                                 {currentTaskId && tasks.find(task => task.id === currentTaskId)?.name}
                                 {isHistoryMode && (
                                     <>
-                                        <span className='text-sm text-gray-500'>{t('history_task_readonly')}</span>
+                                        <span className='text-sm text-gray-500'>
+                                            {t('history_task_readonly')}
+                                            {playback.playbackState === 'playing' && (
+                                                <span className='ml-2 text-blue-400'>▶ {t('playback_mode') || '回放中'}</span>
+                                            )}
+                                        </span>
                                         <Button
                                             type="primary"
                                             size="small"
@@ -1081,12 +1192,25 @@ export default function main() {
                             className='flex-1 h-full overflow-x-hidden overflow-y-auto px-4 pt-5'
                             onScroll={handleScroll}
                         >
-                            <MessageList
-                                messages={messages}
-                                onToolClick={handleToolClick}
-                                onHumanResponse={handleHumanResponse}
-                                onFileClick={handleFileClick}
-                            />
+                            {shouldUseFragments ? (
+                                // Playback mode: show atomic fragments
+                                <AtomicFragmentRenderer
+                                    fragments={playback.displayedFragments}
+                                    isPlaybackMode={true}
+                                    onToolClick={handleToolClick}
+                                    onHumanResponse={handleHumanResponse}
+                                    onFileClick={handleFileClick}
+                                />
+                            ) : (
+                                // Normal/idle mode: show complete messages
+                                <MessageList
+                                    messages={messages}
+                                    onToolClick={handleToolClick}
+                                    onHumanResponse={handleHumanResponse}
+                                    onFileClick={handleFileClick}
+                                    isPlaybackMode={false}
+                                />
+                            )}
                         </div>
 
                         {/* File attachments list - fixed position above input */}
@@ -1099,36 +1223,63 @@ export default function main() {
                             </div>
                         )}
 
-                        {/* Question input box */}
+                        {/* Question input box / Playback control */}
                         <div className='h-30 gradient-border relative'>
-                            <Input.TextArea
-                                value={query}
-                                onKeyDown={handleKeyDown}
-                                onChange={(e) => setQuery(e.target.value)}
-                                className="!h-full !bg-tool-call !text-text-01-dark !placeholder-text-12-dark !py-2"
-                                placeholder={isHistoryMode ? t('history_readonly_input') : t('input_placeholder')}
-                                disabled={isHistoryMode}
-                            />
-
-                            {/* Send/Cancel button - only shown in non-history mode */}
-                            {!isHistoryMode && (
-                                <div className="absolute right-3 bottom-3">
-                                    {isCurrentTaskRunning ? (
-                                        <span 
-                                        className='bg-ask-status rounded-md flex justify-center items-center w-7 h-7 cursor-pointer'
-                                        onClick={handleCancelTask}>
-                                            <CancleTask className="w-5 h-5" />
-                                        </span>
-                                    ) : (
-                                        <span
-                                        className={`bg-ask-status rounded-md flex justify-center items-center w-7 h-7 cursor-pointer ${
-                                           query ? '' : '!cursor-not-allowed opacity-60' 
-                                        }`}
-                                        onClick={() => sendMessage(query)}>
-                                            <SendMessage className="w-5 h-5" />
+                            {isHistoryMode ? (
+                                /* History mode: Show replay button */
+                                <div className="h-full flex items-center justify-center bg-tool-call rounded-xl">
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        icon={playback.playbackState === 'playing' ? <PauseOutlined /> : <CaretRightOutlined />}
+                                        onClick={playback.playbackState === 'playing' ? playback.pause : playback.restart}
+                                        style={{
+                                            background: 'linear-gradient(135deg, #5E31D8 0%, #8B5CF6 100%)',
+                                            borderColor: 'transparent',
+                                            paddingLeft: '24px',
+                                            paddingRight: '24px',
+                                        }}
+                                    >
+                                        {playback.playbackState === 'playing'
+                                            ? t('pause_replay') || '暂停回放'
+                                            : t('replay') || '重新回放'}
+                                    </Button>
+                                    {playback.playbackState === 'playing' && (
+                                        <span className="ml-4 text-sm text-gray-400">
+                                            {playback.currentIndex + 1} / {playback.totalFragments} ({playback.progress}%)
                                         </span>
                                     )}
                                 </div>
+                            ) : (
+                                /* Normal mode: Show input box */
+                                <>
+                                    <Input.TextArea
+                                        value={query}
+                                        onKeyDown={handleKeyDown}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        className="!h-full !bg-tool-call !text-text-01-dark !placeholder-text-12-dark !py-2"
+                                        placeholder={t('input_placeholder')}
+                                    />
+
+                                    {/* Send/Cancel button - only shown in non-history mode */}
+                                    <div className="absolute right-3 bottom-3">
+                                        {isCurrentTaskRunning ? (
+                                            <span
+                                            className='bg-ask-status rounded-md flex justify-center items-center w-7 h-7 cursor-pointer'
+                                            onClick={handleCancelTask}>
+                                                <CancleTask className="w-5 h-5" />
+                                            </span>
+                                        ) : (
+                                            <span
+                                            className={`bg-ask-status rounded-md flex justify-center items-center w-7 h-7 cursor-pointer ${
+                                               query ? '' : '!cursor-not-allowed opacity-60'
+                                            }`}
+                                            onClick={() => sendMessage(query)}>
+                                                <SendMessage className="w-5 h-5" />
+                                            </span>
+                                        )}
+                                    </div>
+                                </>
                             )}
                         </div>
                     </div>

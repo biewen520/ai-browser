@@ -1,0 +1,15 @@
+{
+  "step_backward": "Previous message",
+  "pause": "Pause",
+  "play": "Play",
+  "replay": "Replay",
+  "step_forward": "Next message",
+  "restart": "Restart",
+  "playback_speed": "Playback Speed",
+  "playing": "▶ Playing...",
+  "paused": "⏸ Paused",
+  "completed": "✓ Completed",
+  "ready": "⏹ Ready",
+  "playback_mode": "Playback Mode",
+  "exit_playback": "Exit Playback"
+}

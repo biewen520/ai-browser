@@ -223,3 +223,20 @@ body,
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* History playback message fade-in animation */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Apply fade-in animation to messages during playback */
+.playback-message-enter {
+  animation: messageSlideIn 0.4s ease-out;
+}

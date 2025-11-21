@@ -8,6 +8,7 @@ import type { HumanRequestMessage, HumanResponseMessage } from '../../models/hum
 import { HumanInteractionCard } from './HumanInteractionCard';
 import { useTranslation } from 'react-i18next';
 import { uuidv4 } from '@/common/utils';
+import { useTypewriter } from 'react-simple-typewriter';
 
 const { Text } = Typography;
 
@@ -16,10 +17,17 @@ interface MessageDisplayProps {
   onToolClick?: (message: ToolAction) => void;
   onHumanResponse?: (response: HumanResponseMessage) => void;
   onFileClick?: (file: FileAttachment) => void;
+  enableTypewriter?: boolean;
 }
 
 // Workflow display component
-const WorkflowDisplay = ({ workflow }: { workflow: any }) => {
+const WorkflowDisplay = ({
+  workflow,
+  enableTypewriter = false
+}: {
+  workflow: any;
+  enableTypewriter?: boolean;
+}) => {
   if (!workflow) return null;
 
   // Check if thought is completed by whether agents field exists and has content
@@ -34,14 +42,23 @@ const WorkflowDisplay = ({ workflow }: { workflow: any }) => {
 
       {/* Thinking process - dark theme style */}
       {workflow.thought && (
-        <ThinkingDisplay content={workflow.thought} isCompleted={isThoughtCompleted} />
+        <ThinkingDisplay
+          content={workflow.thought}
+          isCompleted={isThoughtCompleted}
+          enableTypewriter={enableTypewriter}
+        />
       )}
 
       {/* Agent list - STEP format */}
       {workflow.agents && workflow.agents.length > 0 && (
         <div className="space-y-3">
           {workflow.agents.map((agent: any, index: number) => (
-            <StepAgentDisplay key={agent.id || index} agent={agent} stepNumber={index + 1} />
+            <StepAgentDisplay
+              key={agent.id || index}
+              agent={agent}
+              stepNumber={index + 1}
+              enableTypewriter={enableTypewriter}
+            />
           ))}
         </div>
       )}
@@ -65,9 +82,28 @@ const renderNodeText = (node: any, t: any): string => {
 };
 
 // Thinking display component
-const ThinkingDisplay = ({ content, isCompleted = false }: { content: string; isCompleted?: boolean }) => {
+const ThinkingDisplay = ({
+  content,
+  isCompleted = false,
+  enableTypewriter = false
+}: {
+  content: string;
+  isCompleted?: boolean;
+  enableTypewriter?: boolean;
+}) => {
   const { t } = useTranslation('chat');
   const [collapsed, setCollapsed] = useState(false);
+
+  // Use typewriter effect for AI thinking
+  const [typedText] = useTypewriter({
+    words: [content],
+    loop: 1,
+    typeSpeed: 20, // milliseconds per character (slower = more realistic)
+    deleteSpeed: 0,
+    delaySpeed: 0,
+  });
+
+  const displayText = (enableTypewriter && !isCompleted) ? typedText : content;
 
   return (
     <div className="bg-thinking rounded-lg p-4">
@@ -95,7 +131,7 @@ const ThinkingDisplay = ({ content, isCompleted = false }: { content: string; is
       {/* Content */}
       {!collapsed && (
         <div className="text-sm text-text-12-dark leading-relaxed">
-          {content}
+          {displayText}
         </div>
       )}
     </div>
@@ -103,8 +139,27 @@ const ThinkingDisplay = ({ content, isCompleted = false }: { content: string; is
 };
 
 // STEP format Agent display component
-const StepAgentDisplay = ({ agent, stepNumber }: { agent: any; stepNumber: number }) => {
+const StepAgentDisplay = ({
+  agent,
+  stepNumber,
+  enableTypewriter = false
+}: {
+  agent: any;
+  stepNumber: number;
+  enableTypewriter?: boolean;
+}) => {
   const { t } = useTranslation('chat');
+
+  // Apply typewriter to agent task
+  const [taskTyped] = useTypewriter({
+    words: [agent.task || ''],
+    loop: 1,
+    typeSpeed: 20,
+    deleteSpeed: 0,
+    delaySpeed: 0,
+  });
+
+  const displayTask = enableTypewriter ? taskTyped : agent.task;
 
   return (
     <div className="step-agent-display text-base">
@@ -115,7 +170,7 @@ const StepAgentDisplay = ({ agent, stepNumber }: { agent: any; stepNumber: numbe
           {agent.name} {t('agent')}
         </div>
         <div className="mt-1">
-          {agent.task}
+          {displayTask}
         </div>
       </div>
 
@@ -123,17 +178,52 @@ const StepAgentDisplay = ({ agent, stepNumber }: { agent: any; stepNumber: numbe
       {agent.nodes && agent.nodes.length > 0 && (
         <div className="space-y-2">
           {agent.nodes.map((node: any, nodeIndex: number) => (
-            <div key={nodeIndex} className="step-item flex items-center justify-start gap-2 mt-3">
-              <span className="font-semibold w-5 h-5 bg-step rounded-full flex items-center justify-center">
-                {nodeIndex + 1}
-              </span>
-              <span className='line-clamp-1 flex-1'>
-                {renderNodeText(node, t)}
-              </span>
-            </div>
+            <StepNodeDisplay
+              key={nodeIndex}
+              node={node}
+              nodeIndex={nodeIndex}
+              enableTypewriter={enableTypewriter}
+              t={t}
+            />
           ))}
         </div>
       )}
+    </div>
+  );
+};
+
+// Step node display with typewriter
+const StepNodeDisplay = ({
+  node,
+  nodeIndex,
+  enableTypewriter,
+  t
+}: {
+  node: any;
+  nodeIndex: number;
+  enableTypewriter: boolean;
+  t: any;
+}) => {
+  const nodeText = renderNodeText(node, t);
+
+  const [typedText] = useTypewriter({
+    words: [nodeText],
+    loop: 1,
+    typeSpeed: 20,
+    deleteSpeed: 0,
+    delaySpeed: 0,
+  });
+
+  const displayText = enableTypewriter ? typedText : nodeText;
+
+  return (
+    <div className="step-item flex items-center justify-start gap-2 mt-3">
+      <span className="font-semibold w-5 h-5 bg-step rounded-full flex items-center justify-center">
+        {nodeIndex + 1}
+      </span>
+      <span className='line-clamp-1 flex-1'>
+        {displayText}
+      </span>
     </div>
   );
 };
@@ -285,24 +375,39 @@ const MessageContent = ({
   message,
   onToolClick,
   onHumanResponse,
-  onFileClick
+  onFileClick,
+  enableTypewriter = false
 }: {
   message: DisplayMessage;
   onToolClick?: (message: ToolAction) => void;
   onHumanResponse?: (response: HumanResponseMessage) => void;
   onFileClick?: (file: FileAttachment) => void;
+  enableTypewriter?: boolean;
 }) => {
+  // Use typewriter effect for user messages
+  const [userTypedText] = useTypewriter({
+    words: message.type === 'user' ? [message.content] : [''],
+    loop: 1,
+    typeSpeed: 15, // milliseconds per character (faster than AI)
+    deleteSpeed: 0,
+    delaySpeed: 0,
+  });
+
   // User message
   if (message.type === 'user') {
+    const displayContent = (enableTypewriter && message.type === 'user') ? userTypedText : message.content;
+
     return (
       <div className="px-4 py-3 rounded-lg bg-message border border-border-message break-words">
-        <span className="text-base whitespace-pre-wrap">{message.content}</span>
+        <span className="text-base whitespace-pre-wrap">
+          {displayContent}
+        </span>
       </div>
     );
   }
 
   if (message.type === 'workflow') {
-    return <WorkflowDisplay workflow={message.workflow} />;
+    return <WorkflowDisplay workflow={message.workflow} enableTypewriter={enableTypewriter} />;
   }
 
   if (message.type === 'agent_group') {
@@ -346,11 +451,25 @@ const AgentMessageContent = ({
 
 
 // Single message component
-const MessageItem = ({ message, onToolClick, onHumanResponse, onFileClick }: MessageDisplayProps) => {
+const MessageItem = ({
+  message,
+  onToolClick,
+  onHumanResponse,
+  onFileClick,
+  enableTypewriter = false
+}: MessageDisplayProps) => {
   const isUser = message.type === 'user';
 
   // Get message content
-  const messageContent = <MessageContent message={message} onToolClick={onToolClick} onHumanResponse={onHumanResponse} onFileClick={onFileClick} />;
+  const messageContent = (
+    <MessageContent
+      message={message}
+      onToolClick={onToolClick}
+      onHumanResponse={onHumanResponse}
+      onFileClick={onFileClick}
+      enableTypewriter={enableTypewriter}
+    />
+  );
 
   // If message content is empty, don't display the entire message item
   if (!messageContent) {
@@ -434,25 +553,39 @@ const MessageListComponent = ({
   messages,
   onToolClick,
   onHumanResponse,
-  onFileClick
+  onFileClick,
+  isPlaybackMode = false
 }: {
   messages: DisplayMessage[];
   onToolClick?: (message: ToolAction) => void;
   onHumanResponse?: (response: HumanResponseMessage) => void;
   onFileClick?: (file: FileAttachment) => void;
+  isPlaybackMode?: boolean;
 }) => {
+  // In playback mode, only apply typewriter effect to the last (newest) message
+  const lastMessageIndex = messages.length - 1;
 
   return (
     <div className="message-list space-y-2">
-      {messages.map((message) => (
-        <MessageItem
-          message={message}
-          key={message.id}
-          onToolClick={onToolClick}
-          onHumanResponse={onHumanResponse}
-          onFileClick={onFileClick}
-        />
-      ))}
+      {messages.map((message, index) => {
+        // Only enable typewriter for the last message during playback
+        const shouldEnableTypewriter = isPlaybackMode && index === lastMessageIndex;
+
+        return (
+          <div
+            key={`${message.id}-${index}-${shouldEnableTypewriter}`}
+            className={shouldEnableTypewriter ? 'playback-message-enter' : ''}
+          >
+            <MessageItem
+              message={message}
+              onToolClick={onToolClick}
+              onHumanResponse={onHumanResponse}
+              onFileClick={onFileClick}
+              enableTypewriter={shouldEnableTypewriter}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 };

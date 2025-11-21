@@ -1,0 +1,15 @@
+{
+  "step_backward": "上一条消息",
+  "pause": "暂停",
+  "play": "播放",
+  "replay": "重新播放",
+  "step_forward": "下一条消息",
+  "restart": "重新开始",
+  "playback_speed": "回放速度",
+  "playing": "▶ 播放中...",
+  "paused": "⏸ 已暂停",
+  "completed": "✓ 已完成",
+  "ready": "⏹ 准备就绪",
+  "playback_mode": "回放模式",
+  "exit_playback": "退出回放"
+}
