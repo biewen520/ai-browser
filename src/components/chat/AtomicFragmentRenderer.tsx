@@ -7,15 +7,16 @@ import { HumanInteractionCard } from './HumanInteractionCard';
 import { Spin, Button } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { ToolAction, FileAttachment } from '@/models';
-import { uuidv4 } from '@/common/utils';
+import type { HumanResponseMessage } from '@/models/human-interaction';
+import { uuidv4 } from '@/utils/uuid';
 import ReactMarkdown from 'react-markdown';
 
 interface AtomicFragmentRendererProps {
   fragments: AtomicMessageFragment[];
   isPlaybackMode?: boolean;
-  onToolClick?: (message: any) => void;
-  onHumanResponse?: (response: any) => void;
-  onFileClick?: (file: any) => void;
+  onToolClick?: (message: ToolAction) => void;
+  onHumanResponse?: (response: HumanResponseMessage) => void;
+  onFileClick?: (file: FileAttachment) => void;
 }
 
 /**

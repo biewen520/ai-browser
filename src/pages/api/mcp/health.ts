@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import mcpToolManager from '../../../lib/mcpTools';
+import mcpToolManager from '@/services/mcp';
 import { getClientCount } from './sse';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {

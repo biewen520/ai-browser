@@ -142,25 +142,25 @@ export default function FileView() {
   };
 
   return (
-    <Layout style={{ height: '100vh' }}>
-      <Content className='p-4 flex flex-col' style={{ padding: '16px' }}>
+    <Layout className="h-screen">
+      <Content className="p-4 flex flex-col">
         {/* Header information bar */}
         <Card>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <FileTextOutlined style={{ fontSize: '20px', color: '#1890ff' }} />
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <FileTextOutlined className="text-xl text-blue-500" />
               <div>
-                <Title level={4} style={{ margin: 0 }}>
+                <Title level={4} className="m-0">
                   {t('title')}
                 </Title>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
+                <Text type="secondary" className="text-xs">
                   {fileState.lastUpdated ? t('last_updated', { time: formatTime(fileState.lastUpdated) }) : t('waiting_content')}
                 </Text>
               </div>
             </div>
 
             <Space>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
+              <Text type="secondary" className="text-xs">
                 {t('stats', { lines: fileState.lineCount, words: fileState.wordCount })}
               </Text>
               <Button
@@ -203,44 +203,18 @@ export default function FileView() {
         {/* File content area */}
         {showType === 'code' ? (<Card className='flex-1 overflow-auto' ref={contentRef}>
           {fileState.isLoading ? (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100%',
-              flexDirection: 'column',
-              gap: '16px'
-            }}>
+            <div className="flex justify-center items-center h-full flex-col gap-4">
               <Spin size="large" />
               <Text type="secondary">{t('waiting_ai')}</Text>
             </div>
           ) : fileState.content ? (
-            <div
-              style={{
-                height: '100%',
-                overflow: 'auto',
-                fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                fontSize: '14px',
-                lineHeight: '1.6',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                padding: '16px',
-                borderRadius: '6px'
-              }}
-            >
+            <div className="h-full overflow-auto font-mono text-sm leading-relaxed whitespace-pre-wrap break-words p-4 rounded-md">
               {fileState.content}
             </div>
           ) : (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              height: '100%',
-              flexDirection: 'column',
-              gap: '16px'
-            }}>
-              <FileTextOutlined style={{ fontSize: '64px', color: '#d9d9d9' }} />
-              <div style={{ textAlign: 'center' }}>
+            <div className="flex justify-center items-center h-full flex-col gap-4">
+              <FileTextOutlined className="text-6xl text-gray-300" />
+              <div className="text-center">
                 <Title level={4} type="secondary">{t('no_content')}</Title>
                 <Text type="secondary">
                   {t('no_content_hint')}

@@ -1,4 +1,7 @@
-// src/utils/window-capture.ts
+/**
+ * Window capture utility for creating MediaStream from native window capture
+ */
+
 type CaptureFn = (windowNumber: number, scale?: number) => {
   width: number;
   height: number;

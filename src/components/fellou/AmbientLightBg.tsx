@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { cn } from "./utils";
+import { cn } from "@/utils/cn";
 
 interface AnimatedBackgroundProps {
   className?: string;

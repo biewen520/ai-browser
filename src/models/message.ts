@@ -1,12 +1,43 @@
 import { WorkflowAgent } from "@jarvis-agent/core";
 
-// Tool execution action
+/**
+ * Tool execution parameters
+ */
+export type ToolParams = Record<string, unknown>;
+
+/**
+ * File write result structure
+ */
+export interface FileWriteResult {
+  fileName: string;
+  filePath: string;
+  previewUrl?: string;
+  size?: number;
+}
+
+/**
+ * Text content result structure
+ */
+export interface TextContentResult {
+  content: string;
+}
+
+/**
+ * Tool execution result - can be various types depending on the tool
+ */
+export type ToolResult = string | FileWriteResult | TextContentResult | Record<string, unknown> | unknown;
+
+/**
+ * Tool execution action
+ */
 export interface ToolAction {
   id: string;
   toolName: string;
   type: 'tool';
-  params?: any;
+  params?: ToolParams;
   status: 'streaming' | 'use' | 'running' | 'completed';
+  // Note: result type varies by tool, using any for flexibility
+  // Common structures: string | FileWriteResult | TextContentResult
   result?: any;
   timestamp: Date;
   agentName: string;
@@ -21,12 +52,19 @@ export interface TextMessage {
 
 export type AgentMessage = ToolAction | TextMessage;
 
-// Workflow message - contains planning and thinking process
+/**
+ * Workflow data structure
+ */
+export type WorkflowData = Record<string, unknown>;
+
+/**
+ * Workflow message - contains planning and thinking process
+ */
 export interface WorkflowMessage {
   id: string;
   type: 'workflow';
   taskId: string;
-  workflow?: any; // Workflow type
+  workflow?: WorkflowData;
   thinking?: {
     text: string;
     completed: boolean;
@@ -57,3 +95,61 @@ export interface UserMessage {
 
 // Display layer message union type
 export type DisplayMessage = WorkflowMessage | AgentGroupMessage | UserMessage;
+
+/**
+ * Fragment data types for atomic message fragments
+ */
+export interface ThinkingFragmentData {
+  isCompleted: boolean;
+}
+
+export interface AgentTaskFragmentData {
+  agentName: string;
+  agentId: string;
+}
+
+export interface AgentNodeFragmentData {
+  agentName: string;
+  nodeIndex: number;
+  totalNodes: number;
+}
+
+export interface AgentGroupHeaderFragmentData {
+  agentName: string;
+  agentNode?: WorkflowAgent;
+  status: 'running' | 'completed' | 'error';
+}
+
+export interface ToolFragmentData {
+  toolMessage: AgentMessage;
+}
+
+export type FragmentData =
+  | ThinkingFragmentData
+  | AgentTaskFragmentData
+  | AgentNodeFragmentData
+  | AgentGroupHeaderFragmentData
+  | ToolFragmentData;
+
+export type FragmentType =
+  | 'user'
+  | 'thinking'
+  | 'agent-task'
+  | 'agent-node'
+  | 'text'
+  | 'tool'
+  | 'human-interaction'
+  | 'agent-group-header';
+
+/**
+ * Atomic message fragment - the smallest unit for playback
+ * Each fragment contains a single piece of text that can be displayed with typewriter effect
+ */
+export interface AtomicMessageFragment {
+  id: string;
+  type: FragmentType;
+  content: string;
+  originalMessageId: string;
+  timestamp?: Date;
+  data?: FragmentData;
+}

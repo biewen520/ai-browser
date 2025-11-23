@@ -1,12 +1,12 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import { ConfigProvider, App } from 'antd';
-import theme from '@/config/themeConfig';
-import '@/lib/i18n';  // Initialize i18n
+import theme from '@/config/theme';
+import '@/config/i18n';  // Initialize i18n
 import { useLanguage } from '@/hooks/useLanguage';
 import { useEffect } from 'react';
 import { useLanguageStore } from '@/stores/languageStore';
-import i18n from '@/lib/i18n';
+import i18n from '@/config/i18n';
 
 export default function MyApp({ Component, pageProps }: AppProps) {
   const { antdLocale } = useLanguage();

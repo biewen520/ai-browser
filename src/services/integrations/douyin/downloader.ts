@@ -1,5 +1,5 @@
 import { parseDouyinUrl, VideoInfo } from './parser';
-import { httpClient } from '../../utils/http';
+import { httpClient } from '@/utils/http';
 
 export interface DownloadResult {
   videoUrl: string;

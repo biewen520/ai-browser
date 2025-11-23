@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 import { ConfigManager } from '../utils/config-manager';
 import { windowContextManager } from '../services/window-context-manager';
-import mcpToolManager from '../../../src/lib/mcpTools';
+import mcpToolManager from '../../../src/services/mcp';
 
 /**
  * Register agent configuration related IPC handlers
@@ -86,7 +86,7 @@ export function registerAgentHandlers() {
 
       // Update MCP tools status
       const availableTools = mcpToolManager.getAllToolNames();
-      availableTools.forEach(toolName => {
+      availableTools.forEach((toolName: string) => {
         const toolConfig = agentConfig.mcpTools[toolName];
         if (toolConfig !== undefined) {
           mcpToolManager.setToolEnabled(toolName, toolConfig.enabled);

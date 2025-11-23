@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Tabs, Switch, Input, Button, Card, message, Spin, Divider, Space, Typography } from 'antd';
 import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import type { AgentConfig, McpToolSchema } from '../type';
+import type { AgentConfig, McpToolSchema } from '@/types';
 
 const { TabPane } = Tabs;
 const { TextArea } = Input;

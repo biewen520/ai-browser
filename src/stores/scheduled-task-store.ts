@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { ScheduledTask, TaskTemplate } from '@/models';
-import { scheduledTaskStorage } from '@/lib/scheduled-task-storage';
+import { scheduledTaskStorage } from '@/services/scheduled-task-storage';
+import { logger } from '@/utils/logger';
 
 /**
  * Scheduled task state management
@@ -89,7 +90,7 @@ export const useScheduledTaskStore = create<ScheduledTaskState>((set, get) => ({
       const tasks = await scheduledTaskStorage.getAllScheduledTasks();
       set({ scheduledTasks: tasks });
     } catch (error) {
-      console.error('Failed to load scheduled tasks:', error);
+      logger.error('Failed to load scheduled tasks', error, 'ScheduledTaskStore');
     } finally {
       set({ isLoading: false });
     }
@@ -120,7 +121,7 @@ export const useScheduledTaskStore = create<ScheduledTaskState>((set, get) => ({
 
       set({ showCreateModal: false });
     } catch (error) {
-      console.error('Failed to create task:', error);
+      logger.error('Failed to create task', error);
       throw error;
     } finally {
       set({ isLoading: false });
@@ -152,7 +153,7 @@ export const useScheduledTaskStore = create<ScheduledTaskState>((set, get) => ({
 
       set({ showCreateModal: false, isEditMode: false });
     } catch (error) {
-      console.error('Failed to update task:', error);
+      logger.error('Failed to update task', error);
       throw error;
     } finally {
       set({ isLoading: false });
@@ -181,7 +182,7 @@ export const useScheduledTaskStore = create<ScheduledTaskState>((set, get) => ({
         set({ selectedTask: null });
       }
     } catch (error) {
-      console.error('Failed to delete task:', error);
+      logger.error('Failed to delete task', error);
       throw error;
     } finally {
       set({ isLoading: false });
@@ -215,7 +216,7 @@ export const useScheduledTaskStore = create<ScheduledTaskState>((set, get) => ({
       const templates = await response.json();
       set({ templates });
     } catch (error) {
-      console.error('Failed to load templates:', error);
+      logger.error('Failed to load templates', error);
     } finally {
       set({ isLoading: false });
     }
@@ -228,10 +229,10 @@ export const useScheduledTaskStore = create<ScheduledTaskState>((set, get) => ({
     try {
       if (typeof window !== 'undefined' && (window as any).api) {
         const result = await (window as any).api.invoke('scheduler:execute-now', task);
-        console.log('Task execution result:', result);
+        logger.debug('Task execution result', 'ScheduledTaskStore', result);
       }
     } catch (error) {
-      console.error('Failed to execute task:', error);
+      logger.error('Failed to execute task', error, 'ScheduledTaskStore');
       throw error;
     }
   },
@@ -242,14 +243,14 @@ export const useScheduledTaskStore = create<ScheduledTaskState>((set, get) => ({
    */
   initializeScheduler: async () => {
     try {
-      console.log('[ScheduledTaskStore] Starting scheduler initialization...');
+      logger.info('Starting scheduler initialization', 'ScheduledTaskStore');
 
       // Load all scheduled tasks
       await scheduledTaskStorage.init();
       const allTasks = await scheduledTaskStorage.getAllScheduledTasks();
       const enabledTasks = allTasks.filter(task => task.enabled);
 
-      console.log(`[ScheduledTaskStore] Found ${allTasks.length} scheduled tasks, ${enabledTasks.length} enabled`);
+      logger.info(`Found ${allTasks.length} scheduled tasks, ${enabledTasks.length} enabled`, 'ScheduledTaskStore');
 
       // Register to scheduler
       if (typeof window !== 'undefined' && (window as any).api) {
@@ -257,21 +258,21 @@ export const useScheduledTaskStore = create<ScheduledTaskState>((set, get) => ({
           try {
             const result = await (window as any).api.invoke('scheduler:add-task', task);
             if (result.success) {
-              console.log(`[ScheduledTaskStore] ✓ Registered task: ${task.name}`, result.nextExecuteAt);
+              logger.info(`✓ Registered task: ${task.name}`, 'ScheduledTaskStore', result.nextExecuteAt);
             } else {
-              console.warn(`[ScheduledTaskStore] ✗ Failed to register task: ${task.name}`, result.message);
+              logger.warn(`✗ Failed to register task: ${task.name}`, 'ScheduledTaskStore', result.message);
             }
           } catch (error) {
-            console.error(`[ScheduledTaskStore] Exception registering task: ${task.name}`, error);
+            logger.error(`Exception registering task: ${task.name}`, error, 'ScheduledTaskStore');
           }
         }
 
-        console.log('[ScheduledTaskStore] Scheduler initialization completed');
+        logger.info('Scheduler initialization completed', 'ScheduledTaskStore');
       } else {
-        console.warn('[ScheduledTaskStore] Window API not available, cannot initialize scheduler');
+        logger.warn('Window API not available, cannot initialize scheduler', 'ScheduledTaskStore');
       }
     } catch (error) {
-      console.error('[ScheduledTaskStore] Failed to initialize scheduler:', error);
+      logger.error('Failed to initialize scheduler', error, 'ScheduledTaskStore');
     }
   },
 

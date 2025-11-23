@@ -1,9 +1,45 @@
+import { logger } from '@/utils/logger';
+
+/**
+ * Tool execution context with task metadata
+ */
+interface ToolContext {
+  taskId?: string;
+  userId?: string;
+  sessionId?: string;
+}
+
+/**
+ * Douyin tool arguments
+ */
+interface DouyinDownloadArgs {
+  share_link: string;
+  model?: string;
+}
+
+/**
+ * Xiaohongshu tool arguments
+ */
+interface XiaohongshuExtractArgs {
+  video_url: string;
+  model?: string;
+}
+
+/**
+ * Union type for all tool arguments
+ */
+type ToolArgs = DouyinDownloadArgs | XiaohongshuExtractArgs | Record<string, unknown>;
+
 interface ToolSchema {
   name: string;
   description: string;
   inputSchema: {
     type: string;
-    properties: Record<string, any>;
+    properties: Record<string, {
+      type: string;
+      description?: string;
+      default?: string;
+    }>;
     required: string[];
   };
 }
@@ -15,14 +51,89 @@ interface ToolResult {
     image?: string;
     mimeType?: string;
   }>;
-  extInfo?: Record<string, any>;
+  extInfo?: Record<string, unknown>;
 }
 
-type ToolHandler = (args: any, extInfo?: any) => Promise<ToolResult>;
+/**
+ * Tool handler function type with generic argument type
+ */
+type ToolHandler<T extends ToolArgs = ToolArgs> = (
+  args: T,
+  context?: ToolContext
+) => Promise<ToolResult>;
 
 class McpToolManager {
   private tools: Map<string, ToolHandler> = new Map();
   private enabledTools: Set<string> = new Set();
+
+  private readonly toolSchemas: { [key: string]: ToolSchema } = {
+    get_douyin_download_link: {
+      name: 'get_douyin_download_link',
+      description: 'Get Douyin video watermark-free download link',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          share_link: {
+            type: 'string',
+            description: 'Douyin share link or text containing the link'
+          }
+        },
+        required: ['share_link']
+      }
+    },
+    extract_xiaohongshu_text: {
+      name: 'extract_xiaohongshu_text',
+      description: 'Extract text content from Xiaohongshu video (audio to text). Note: Only works with video posts!',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          video_url: {
+            type: 'string',
+            description: 'Xiaohongshu video URL'
+          },
+          model: {
+            type: 'string',
+            description: 'Speech recognition model, default is sensevoice-v1',
+            default: 'sensevoice-v1'
+          }
+        },
+        required: ['video_url']
+      }
+    },
+    extract_douyin_text: {
+      name: 'extract_douyin_text',
+      description: 'Extract text content from Douyin video (audio to text)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          share_link: {
+            type: 'string',
+            description: 'Douyin share link or text containing the link'
+          },
+          model: {
+            type: 'string',
+            description: 'Speech recognition model, default is paraformer-v2',
+            default: 'paraformer-v2'
+          }
+        },
+        required: ['share_link']
+      }
+    },
+    parse_douyin_video_info: {
+      name: 'parse_douyin_video_info',
+      description: 'Parse Douyin video basic information (without downloading video file)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          share_link: {
+            type: 'string',
+            description: 'Douyin share link'
+          }
+        },
+        required: ['share_link']
+      }
+    }
+  };
 
   constructor() {
     this.registerDefaultTools();
@@ -33,7 +144,7 @@ class McpToolManager {
   public registerTool(name: string, handler: ToolHandler) {
     this.tools.set(name, handler);
     this.enabledTools.add(name); // Auto-enable new tools
-    console.log(`Registered tool: ${name}`);
+    logger.debug(`Registered tool: ${name}`, 'McpToolsManager');
   }
 
   /**
@@ -49,10 +160,10 @@ class McpToolManager {
   public enableTool(name: string): boolean {
     if (this.tools.has(name)) {
       this.enabledTools.add(name);
-      console.log(`Enabled tool: ${name}`);
+      logger.debug(`Enabled tool: ${name}`, 'McpToolsManager');
       return true;
     }
-    console.warn(`Tool not found: ${name}`);
+    logger.warn(`Tool not found: ${name}`, 'McpToolsManager');
     return false;
   }
 
@@ -62,10 +173,10 @@ class McpToolManager {
   public disableTool(name: string): boolean {
     if (this.tools.has(name)) {
       this.enabledTools.delete(name);
-      console.log(`Disabled tool: ${name}`);
+      logger.debug(`Disabled tool: ${name}`, 'McpToolsManager');
       return true;
     }
-    console.warn(`Tool not found: ${name}`);
+    logger.warn(`Tool not found: ${name}`, 'McpToolsManager');
     return false;
   }
 
@@ -87,75 +198,6 @@ class McpToolManager {
    * Get only enabled tools
    */
   public getTools(): ToolSchema[] {
-    const toolSchemas: { [key: string]: ToolSchema } = {
-      get_douyin_download_link: {
-        name: 'get_douyin_download_link',
-        description: 'Get Douyin video watermark-free download link',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            share_link: {
-              type: 'string',
-              description: 'Douyin share link or text containing the link'
-            }
-          },
-          required: ['share_link']
-        }
-      },
-      extract_xiaohongshu_text: {
-        name: 'extract_xiaohongshu_text',
-        description: 'Extract text content from Xiaohongshu video (audio to text). Note: Only works with video posts!',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            video_url: {
-              type: 'string',
-              description: 'Xiaohongshu video URL'
-            },
-            model: {
-              type: 'string',
-              description: 'Speech recognition model, default is sensevoice-v1',
-              default: 'sensevoice-v1'
-            }
-          },
-          required: ['video_url']
-        }
-      },
-      extract_douyin_text: {
-        name: 'extract_douyin_text',
-        description: 'Extract text content from Douyin video (audio to text)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            share_link: {
-              type: 'string',
-              description: 'Douyin share link or text containing the link'
-            },
-            model: {
-              type: 'string',
-              description: 'Speech recognition model, default is paraformer-v2',
-              default: 'paraformer-v2'
-            }
-          },
-          required: ['share_link']
-        }
-      },
-      parse_douyin_video_info: {
-        name: 'parse_douyin_video_info',
-        description: 'Parse Douyin video basic information (without downloading video file)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            share_link: {
-              type: 'string',
-              description: 'Douyin share link'
-            }
-          },
-          required: ['share_link']
-        }
-      }
-    };
-
     const tools: ToolSchema[] = [];
 
     // Only return enabled tools
@@ -164,8 +206,8 @@ class McpToolManager {
         return; // Skip disabled tools
       }
 
-      if (toolSchemas[name]) {
-        tools.push(toolSchemas[name]);
+      if (this.toolSchemas[name]) {
+        tools.push(this.toolSchemas[name]);
       } else {
         // Default tool definition
         tools.push({
@@ -187,79 +229,10 @@ class McpToolManager {
    * Get all tools (including disabled ones) with their metadata
    */
   public getAllToolsWithStatus(): Array<ToolSchema & { enabled: boolean }> {
-    const toolSchemas: { [key: string]: ToolSchema } = {
-      get_douyin_download_link: {
-        name: 'get_douyin_download_link',
-        description: 'Get Douyin video watermark-free download link',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            share_link: {
-              type: 'string',
-              description: 'Douyin share link or text containing the link'
-            }
-          },
-          required: ['share_link']
-        }
-      },
-      extract_xiaohongshu_text: {
-        name: 'extract_xiaohongshu_text',
-        description: 'Extract text content from Xiaohongshu video (audio to text). Note: Only works with video posts!',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            video_url: {
-              type: 'string',
-              description: 'Xiaohongshu video URL'
-            },
-            model: {
-              type: 'string',
-              description: 'Speech recognition model, default is sensevoice-v1',
-              default: 'sensevoice-v1'
-            }
-          },
-          required: ['video_url']
-        }
-      },
-      extract_douyin_text: {
-        name: 'extract_douyin_text',
-        description: 'Extract text content from Douyin video (audio to text)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            share_link: {
-              type: 'string',
-              description: 'Douyin share link or text containing the link'
-            },
-            model: {
-              type: 'string',
-              description: 'Speech recognition model, default is paraformer-v2',
-              default: 'paraformer-v2'
-            }
-          },
-          required: ['share_link']
-        }
-      },
-      parse_douyin_video_info: {
-        name: 'parse_douyin_video_info',
-        description: 'Parse Douyin video basic information (without downloading video file)',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            share_link: {
-              type: 'string',
-              description: 'Douyin share link'
-            }
-          },
-          required: ['share_link']
-        }
-      }
-    };
-
     const tools: Array<ToolSchema & { enabled: boolean }> = [];
 
     this.tools.forEach((handler, name) => {
-      const schema = toolSchemas[name] || {
+      const schema = this.toolSchemas[name] || {
         name,
         description: `Tool: ${name}`,
         inputSchema: {
@@ -288,14 +261,14 @@ class McpToolManager {
       const result = await toolHandler(args, extInfo);
       return result;
     } catch (error) {
-      console.error(`Error executing tool ${name}:`, error);
+      logger.error(`Error executing tool ${name}`, error, 'McpToolsManager');
       throw error;
     }
   }
 
   private registerDefaultTools() {
     // Douyin related tools
-    this.registerTool('get_douyin_download_link', async (args: any) => {
+    this.registerTool('get_douyin_download_link', async (args: DouyinDownloadArgs) => {
       try {
         const response = await this.callDouyinMcp('get_douyin_download_link', args);
         return response;
@@ -309,7 +282,7 @@ class McpToolManager {
       }
     });
 
-    this.registerTool('extract_douyin_text', async (args: any) => {
+    this.registerTool('extract_douyin_text', async (args: DouyinDownloadArgs) => {
       try {
         const response = await this.callDouyinMcp('extract_douyin_text', args);
         return response;
@@ -323,7 +296,7 @@ class McpToolManager {
       }
     });
 
-    this.registerTool('parse_douyin_video_info', async (args: any) => {
+    this.registerTool('parse_douyin_video_info', async (args: DouyinDownloadArgs) => {
       try {
         const response = await this.callDouyinMcp('parse_douyin_video_info', args);
         return response;
@@ -338,7 +311,7 @@ class McpToolManager {
     });
 
     // Xiaohongshu related tools
-    this.registerTool('extract_xiaohongshu_text', async (args: any) => {
+    this.registerTool('extract_xiaohongshu_text', async (args: XiaohongshuExtractArgs) => {
       try {
         const response = await this.callXiaohongshuMcp('extract_xiaohongshu_text', args);
         return response;
@@ -353,16 +326,24 @@ class McpToolManager {
     });
   }
 
-  // Call real douyin service
-  private async callDouyinMcp(toolName: string, args: any): Promise<ToolResult> {
-    const { DouyinService } = await import('./douyin');
+  /**
+   * Call Douyin MCP service
+   */
+  private async callDouyinMcp(toolName: string, args: DouyinDownloadArgs): Promise<ToolResult> {
+    const { DouyinService } = await import('./integrations/douyin');
+
+    // Validate API key
+    const apiKey = process.env.BAILIAN_API_KEY;
+    if (!apiKey) {
+      throw new Error(
+        'BAILIAN_API_KEY is not configured. Please set it in environment variables to use Douyin services.'
+      );
+    }
 
     // Initialize service with Alibaba Cloud Bailian API key from environment
-    const douyinService = new DouyinService({
-      apiKey: process.env.BAILIAN_API_KEY || ''
-    });
+    const douyinService = new DouyinService({ apiKey });
 
-    console.log(`Calling real douyin service tool: ${toolName}`, args);
+    logger.debug(`Calling douyin service tool: ${toolName}`, 'McpToolsManager', args);
 
     try {
       if (toolName === 'get_douyin_download_link') {
@@ -409,21 +390,30 @@ class McpToolManager {
       throw new Error(`Unknown douyin tool: ${toolName}`);
 
     } catch (error) {
-      console.error(`Douyin service error for ${toolName}:`, error);
+      logger.error(`Douyin service error for ${toolName}`, error, 'McpToolsManager');
       throw error;
     }
   }
 
   // Call real xiaohongshu service
-  private async callXiaohongshuMcp(toolName: string, args: any): Promise<ToolResult> {
-    const { XiaohongshuService } = await import('./xiaohongshu');
+  /**
+   * Call Xiaohongshu MCP service
+   */
+  private async callXiaohongshuMcp(toolName: string, args: XiaohongshuExtractArgs): Promise<ToolResult> {
+    const { XiaohongshuService } = await import('./integrations/xiaohongshu');
+
+    // Validate API key
+    const apiKey = process.env.BAILIAN_API_KEY;
+    if (!apiKey) {
+      throw new Error(
+        'BAILIAN_API_KEY is not configured. Please set it in environment variables to use Xiaohongshu services.'
+      );
+    }
 
     // Initialize service with Alibaba Cloud Bailian API key from environment
-    const xiaohongshuService = new XiaohongshuService({
-      apiKey: process.env.BAILIAN_API_KEY || ''
-    });
+    const xiaohongshuService = new XiaohongshuService({ apiKey });
 
-    console.log(`Calling xiaohongshu service tool: ${toolName}`, args);
+    logger.debug(`Calling xiaohongshu service tool: ${toolName}`, 'McpToolsManager', args);
 
     try {
       if (toolName === 'extract_xiaohongshu_text') {
@@ -443,7 +433,7 @@ class McpToolManager {
       throw new Error(`Unknown xiaohongshu tool: ${toolName}`);
 
     } catch (error) {
-      console.error(`Xiaohongshu service error for ${toolName}:`, error);
+      logger.error(`Xiaohongshu service error for ${toolName}`, error, 'McpToolsManager');
       throw error;
     }
   }
