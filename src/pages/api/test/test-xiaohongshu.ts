@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { XiaohongshuService } from '../../../lib/xiaohongshu';
+import { XiaohongshuService } from '@/services/integrations/xiaohongshu';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {

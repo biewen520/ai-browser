@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import mcpToolManager from '../../../lib/mcpTools';
+import mcpToolManager from '@/services/mcp';
 import { sendSseMessage, getClientCount } from './sse';
+import { logger } from '@/utils/logger';
 
 interface McpListToolParam {
   taskId: string;
@@ -25,8 +26,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const { jsonrpc, id, method, params } = req.body;
-    
-    console.log(`Received ${method} request:`, { id, params });
+
+    logger.debug(`Received ${method} request`, 'McpMessageAPI', { id, params });
 
     let result: any;
     
@@ -68,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Check if there are active SSE connections
     if (getClientCount() === 0) {
-      console.warn(`No SSE clients connected for message ${id}`);
+      logger.warn(`No SSE clients connected for message ${id}`, 'McpMessageAPI');
       return;
     }
 
@@ -77,12 +78,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       try {
         sendSseMessage(id, { jsonrpc, id, result });
       } catch (error) {
-        console.error(`Failed to send SSE message for ${id}:`, error);
+        logger.error(`Failed to send SSE message for ${id}`, error, 'McpMessageAPI');
       }
     }, 50);
 
   } catch (error) {
-    console.error('Error handling request:', error);
+    logger.error('Error handling request', error, 'McpMessageAPI');
     res.status(500).json({
       jsonrpc: '2.0',
       id: req.body.id,
@@ -95,21 +96,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleListTools(params: McpListToolParam): Promise<{ tools: any[] }> {
-  console.log('Listing tools for:', params);
-  
+  logger.debug('Listing MCP tools', 'McpMessageAPI', params);
+
   const tools = mcpToolManager.getTools();
   return { tools };
 }
 
 async function handleCallTool(params: McpCallToolParam): Promise<any> {
   const { name, arguments: args, extInfo } = params;
-  console.log(`Calling tool: ${name}`, { args, extInfo });
+  logger.debug(`Calling MCP tool: ${name}`, 'McpMessageAPI', { args, extInfo });
 
   try {
     const result = await mcpToolManager.callTool(name, args, extInfo);
     return result;
   } catch (error) {
-    console.error(`Error executing tool ${name}:`, error);
+    logger.error(`Error executing tool ${name}`, error, 'McpMessageAPI');
     throw error;
   }
 } 

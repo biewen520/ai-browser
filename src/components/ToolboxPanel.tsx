@@ -39,7 +39,7 @@ export default function ToolboxPanel({ visible, onClose }: ToolboxPanelProps) {
       id: 'agent-config',
       title: 'Agent Configuration',
       description: 'Configure AI agents and MCP tools for task execution',
-      icon: <RobotOutlined style={{ fontSize: '32px' }} />,
+      icon: <RobotOutlined className="text-3xl" />,
       color: '#1890ff',
       onClick: () => {
         setAgentConfigVisible(true);
@@ -50,7 +50,7 @@ export default function ToolboxPanel({ visible, onClose }: ToolboxPanelProps) {
       id: 'scheduled-tasks',
       title: 'Scheduled Tasks',
       description: 'Create and manage automated recurring tasks',
-      icon: <ClockCircleOutlined style={{ fontSize: '32px' }} />,
+      icon: <ClockCircleOutlined className="text-3xl" />,
       color: '#52c41a',
       onClick: () => {
         setShowListPanel(true);
@@ -61,7 +61,7 @@ export default function ToolboxPanel({ visible, onClose }: ToolboxPanelProps) {
       id: 'system-settings',
       title: 'System Settings',
       description: 'Configure application preferences and behavior',
-      icon: <SettingOutlined style={{ fontSize: '32px' }} />,
+      icon: <SettingOutlined className="text-3xl" />,
       color: '#722ed1',
       onClick: () => {
         Modal.info({
@@ -74,7 +74,7 @@ export default function ToolboxPanel({ visible, onClose }: ToolboxPanelProps) {
       id: 'tools-marketplace',
       title: 'Tools Marketplace',
       description: 'Browse and install additional MCP tools and plugins',
-      icon: <ToolOutlined style={{ fontSize: '32px' }} />,
+      icon: <ToolOutlined className="text-3xl" />,
       color: '#fa8c16',
       onClick: () => {
         Modal.info({
@@ -87,7 +87,7 @@ export default function ToolboxPanel({ visible, onClose }: ToolboxPanelProps) {
       id: 'workflow-templates',
       title: 'Workflow Templates',
       description: 'Pre-built automation workflows for common tasks',
-      icon: <ThunderboltOutlined style={{ fontSize: '32px' }} />,
+      icon: <ThunderboltOutlined className="text-3xl" />,
       color: '#eb2f96',
       onClick: () => {
         Modal.info({
@@ -102,8 +102,8 @@ export default function ToolboxPanel({ visible, onClose }: ToolboxPanelProps) {
     <>
       <Drawer
         title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <ToolOutlined style={{ fontSize: '20px', color: '#1890ff' }} />
+          <div className="flex items-center gap-3">
+            <ToolOutlined className="text-xl text-blue-500" />
             <span>Toolbox</span>
           </div>
         }
@@ -115,47 +115,42 @@ export default function ToolboxPanel({ visible, onClose }: ToolboxPanelProps) {
           body: { padding: '24px' }
         }}
       >
-        <div style={{ marginBottom: '16px' }}>
+        <div className="mb-4">
           <Paragraph type="secondary">
             Access all system features and configuration options from here. Click on any card to open the corresponding tool.
           </Paragraph>
         </div>
 
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space direction="vertical" size="large" className="w-full">
           {tools.map((tool) => (
             <Card
               key={tool.id}
               hoverable
               onClick={tool.onClick}
               style={{
-                cursor: 'pointer',
                 border: `1px solid ${tool.color}20`,
                 transition: 'all 0.3s ease',
               }}
               styles={{
                 body: { padding: '20px' }
               }}
-              className="toolbox-card"
+              className="cursor-pointer hover:shadow-lg hover:-translate-y-0.5"
             >
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+              <div className="flex items-start gap-4">
                 <div
+                  className="p-3 rounded-lg flex items-center justify-center"
                   style={{
                     color: tool.color,
                     backgroundColor: `${tool.color}10`,
-                    padding: '12px',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
                   }}
                 >
                   {tool.icon}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <Title level={5} style={{ margin: '0 0 8px 0', color: tool.color }}>
+                <div className="flex-1">
+                  <Title level={5} className="m-0 mb-2" style={{ color: tool.color }}>
                     {tool.title}
                   </Title>
-                  <Text type="secondary" style={{ fontSize: '14px' }}>
+                  <Text type="secondary" className="text-sm">
                     {tool.description}
                   </Text>
                 </div>
@@ -163,13 +158,6 @@ export default function ToolboxPanel({ visible, onClose }: ToolboxPanelProps) {
             </Card>
           ))}
         </Space>
-
-        <style jsx>{`
-          .toolbox-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            transform: translateY(-2px);
-          }
-        `}</style>
       </Drawer>
 
       {/* Agent Configuration Modal */}

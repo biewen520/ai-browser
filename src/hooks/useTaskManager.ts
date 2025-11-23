@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Task, DisplayMessage } from '@/models';
-import { taskStorage } from '@/lib/taskStorage';
+import { taskStorage } from '@/services/task-storage';
 
 interface UseTaskManagerReturn {
   tasks: Task[];

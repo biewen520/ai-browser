@@ -2,11 +2,19 @@ import React, { useState } from 'react';
 import { Button, Input, Radio, Checkbox, Space } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
 import type { HumanRequestMessage, HumanResponseMessage } from '@/models/human-interaction';
+import { cn } from '@/utils/cn';
 
 interface HumanInteractionCardProps {
   message: HumanRequestMessage;
   onResponse: (response: HumanResponseMessage) => void;
 }
+
+// Reusable style constants
+const CARD_BASE = "border rounded-lg p-3 backdrop-blur-xl transition-all duration-300";
+const CARD_PENDING = "bg-[rgba(60,45,30,0.4)] border-[rgba(251,146,60,0.3)]";
+const CARD_COMPLETED = "bg-[rgba(16,185,129,0.1)] border-[rgba(16,185,129,0.3)] opacity-70";
+const BADGE_PENDING = "text-[rgba(251,146,60,1)]";
+const BADGE_COMPLETED = "text-[rgba(16,185,129,1)]";
 
 /**
  * Human Interaction Card Component
@@ -34,10 +42,10 @@ export const HumanInteractionCard: React.FC<HumanInteractionCardProps> = ({
   // Confirm type: Yes/No confirmation
   if (message.interactType === 'confirm') {
     return (
-      <div className="bg-[rgba(60,45,30,0.4)] border border-[rgba(251,146,60,0.3)] rounded-xl p-5 backdrop-blur-xl transition-all duration-300">
+      <div className={cn(CARD_BASE, CARD_PENDING, "rounded-xl p-5")}>
         <div className="flex items-center gap-2 mb-3">
           <span className="text-lg">⚠️</span>
-          <span className="text-base font-semibold text-[rgba(251,146,60,1)] uppercase tracking-wide">Task Pending</span>
+          <span className={cn("text-base font-semibold uppercase tracking-wide", BADGE_PENDING)}>Task Pending</span>
         </div>
         <p className="text-text-01-dark text-[15px] leading-relaxed mb-4">{message.prompt}</p>
         <Space>
@@ -62,16 +70,10 @@ export const HumanInteractionCard: React.FC<HumanInteractionCardProps> = ({
   // Input type: Text input
   if (message.interactType === 'input') {
     return (
-      <div className={`border rounded-lg p-3 backdrop-blur-xl transition-all duration-300 ${
-        completed
-          ? 'bg-[rgba(16,185,129,0.1)] border-[rgba(16,185,129,0.3)] opacity-70'
-          : 'bg-[rgba(60,45,30,0.4)] border-[rgba(251,146,60,0.3)]'
-      }`}>
+      <div className={cn(CARD_BASE, completed ? CARD_COMPLETED : CARD_PENDING)}>
         <div className="flex items-center gap-2 mb-2">
           <span className="text-base">{completed ? '✓' : '⚠️'}</span>
-          <span className={`text-sm font-semibold uppercase tracking-wide ${
-            completed ? 'text-[rgba(16,185,129,1)]' : 'text-[rgba(251,146,60,1)]'
-          }`}>
+          <span className={cn("text-sm font-semibold uppercase tracking-wide", completed ? BADGE_COMPLETED : BADGE_PENDING)}>
             {completed ? 'Completed' : 'Task Pending'}
           </span>
         </div>
@@ -100,16 +102,10 @@ export const HumanInteractionCard: React.FC<HumanInteractionCardProps> = ({
   // Select type: Single or multiple selection
   if (message.interactType === 'select') {
     return (
-      <div className={`border rounded-lg p-3 backdrop-blur-xl transition-all duration-300 ${
-        completed
-          ? 'bg-[rgba(16,185,129,0.1)] border-[rgba(16,185,129,0.3)] opacity-70'
-          : 'bg-[rgba(60,45,30,0.4)] border-[rgba(251,146,60,0.3)]'
-      }`}>
+      <div className={cn(CARD_BASE, completed ? CARD_COMPLETED : CARD_PENDING)}>
         <div className="flex items-center gap-2 mb-2">
           <span className="text-base">{completed ? '✓' : '⚠️'}</span>
-          <span className={`text-sm font-semibold uppercase tracking-wide ${
-            completed ? 'text-[rgba(16,185,129,1)]' : 'text-[rgba(251,146,60,1)]'
-          }`}>
+          <span className={cn("text-sm font-semibold uppercase tracking-wide", completed ? BADGE_COMPLETED : BADGE_PENDING)}>
             {completed ? 'Completed' : 'Task Pending'}
           </span>
         </div>
@@ -149,16 +145,10 @@ export const HumanInteractionCard: React.FC<HumanInteractionCardProps> = ({
   // Request help type: User assistance required (login, captcha, etc.)
   if (message.interactType === 'request_help') {
     return (
-      <div className={`border rounded-lg p-3 backdrop-blur-xl transition-all duration-300 ${
-        completed
-          ? 'bg-[rgba(16,185,129,0.1)] border-[rgba(16,185,129,0.3)] opacity-70'
-          : 'bg-[rgba(60,45,30,0.4)] border-[rgba(251,146,60,0.3)]'
-      }`}>
+      <div className={cn(CARD_BASE, completed ? CARD_COMPLETED : CARD_PENDING)}>
         <div className="flex items-center gap-2 mb-2">
           <span className="text-base">{completed ? '✓' : '⚠️'}</span>
-          <span className={`text-sm font-semibold uppercase tracking-wide ${
-            completed ? 'text-[rgba(16,185,129,1)]' : 'text-[rgba(251,146,60,1)]'
-          }`}>
+          <span className={cn("text-sm font-semibold uppercase tracking-wide", completed ? BADGE_COMPLETED : BADGE_PENDING)}>
             {completed ? 'Completed' : 'Task Pending'}
           </span>
         </div>

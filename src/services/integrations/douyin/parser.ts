@@ -1,4 +1,5 @@
-import { httpClient } from '../../utils/http';
+import { httpClient } from '@/utils/http';
+import { logger } from '@/utils/logger';
 
 export interface VideoInfo {
   videoId: string;
@@ -68,14 +69,6 @@ export async function parseDouyinUrl(shareText: string): Promise<VideoInfo> {
     // Get data following original logic
     const data = originalVideoInfo.item_list[0];
 
-    // Debug: output video data structure
-    console.log('Video data structure:', JSON.stringify({
-      video: {
-        play_addr: data.video.play_addr,
-        download_addr: data.video.download_addr,
-        duration: data.video.duration
-      }
-    }, null, 2));
 
     // Get video info following original logic
     const videoUrl = data.video.play_addr.url_list[0].replace('playwm', 'play');
@@ -97,7 +90,7 @@ export async function parseDouyinUrl(shareText: string): Promise<VideoInfo> {
     };
 
   } catch (error) {
-    console.error('Failed to parse Douyin link:', error);
+    logger.error('Failed to parse Douyin link', error, 'DouyinParser');
     throw new Error(`Failed to parse Douyin link: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

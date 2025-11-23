@@ -1,5 +1,5 @@
 import { StreamCallbackMessage } from '@jarvis-agent/core';
-import { uuidv4 } from '@/common/utils';
+import { uuidv4 } from '@/utils/uuid';
 import { DisplayMessage, WorkflowMessage, AgentGroupMessage, UserMessage, ToolAction } from '@/models';
 
 // Message transformation and processing class

@@ -128,7 +128,16 @@
 }
 
 /* Ant Design Select dropdown customization - Fellou.ai purple theme */
-/* Dropdown items styling - global since dropdownStyle only handles container */
+/* Dropdown container styling */
+.ant-select-dropdown {
+  background: rgba(8, 12, 16, 0.96) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(145, 75, 241, 0.3) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(145, 75, 241, 0.2) !important;
+}
+
+/* Dropdown items styling */
 .ant-select-item {
   color: rgba(255, 255, 255, 0.9) !important;
   border-radius: 8px !important;
@@ -222,4 +231,21 @@ body,
 /* Scrollbar corner */
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* History playback message fade-in animation */
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Apply fade-in animation to messages during playback */
+.playback-message-enter {
+  animation: messageSlideIn 0.4s ease-out;
 }
